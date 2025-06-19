@@ -53,17 +53,18 @@ def read_query(engine, query):
 connect = connect_mysql()
 
 """
-Tem que executar este arquivo em *\ProjetoFinal>
+Tem que executar este arquivo em .\Banco_de_Dados_API>
 """
-consorcio = "gtfs_rio-de-janeiro/agency.txt"
-escala = "gtfs_rio-de-janeiro/calendar.txt"
-linha = r"gtfs_rio-de-janeiro/routes.txt"
-pontos_de_onibus = r"gtfs_rio-de-janeiro/stops.txt"
-pontos_de_parada = r"gtfs_rio-de-janeiro/stop_times.txt"
-tarifa = r"gtfs_rio-de-janeiro/fare_attributes.txt"
-tarifa_linha = r"gtfs_rio-de-janeiro/fare_rules.txt"
-viagem = r"gtfs_rio-de-janeiro/trips.txt"
-pontos = r"gtfs_rio-de-janeiro/stops.txt"
+diretorio = "/gtfs_rj"
+consorcio = f"{diretorio}/agency.txt"
+escala = f"{diretorio}/calendar.txt"
+linha = f"{diretorio}/routes.txt"
+pontos_de_onibus = f"{diretorio}/stops.txt"
+pontos_de_parada = f"{diretorio}/stop_times.txt"
+tarifa = f"{diretorio}/fare_attributes.txt"
+tarifa_linha = f"{diretorio}/fare_rules.txt"
+viagem = f"{diretorio}/trips.txt"
+pontos = f"{diretorio}/stops.txt"
 
 """
 Consorcio
@@ -106,7 +107,7 @@ df_linha = pd.merge(
 df_linha = df_linha.drop('fare_id_antiga', axis=1)
 df_linha = df_linha.rename(columns={'fare_id_nova': 'fare_id'})
 
-df_itineraries = pd.read_csv(r'gtfs_rio-de-janeiro/itinerario.csv', sep=",")
+df_itineraries = pd.read_csv(f'{diretorio}/itinerario.csv', sep=",")
 df_itineraries['servico'] = df_itineraries['servico'].astype(str)
 route_type_map = df_itineraries[['servico', 'tipo_rota']].drop_duplicates().set_index('servico')
 
@@ -176,7 +177,7 @@ Viagens
 """
 df_viagem = pd.read_csv(viagem,sep=",")
 df_viagem = df_viagem[["trip_id","trip_headsign","direction_id","route_id","service_id"]]
-df_frequencia = pd.read_csv(r'gtfs_rio-de-janeiro/frequencies.txt',sep=",")
+df_frequencia = pd.read_csv(f'{diretorio}/frequencies.txt',sep=",")
 df_frequencia = df_frequencia[['trip_id', 'start_time', 'end_time']]
 
 df_viagem = pd.merge(
