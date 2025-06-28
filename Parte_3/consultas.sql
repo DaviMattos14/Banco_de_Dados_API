@@ -99,13 +99,12 @@ ON t.id_tarifa = l.fk_id_tarifa
 WHERE l.numero_linha = '2345'
 
 -- Linhas de ônubus por valor
-
 SELECT valor, l.nome_linha, l.numero_linha
 FROM tarifa t JOIN linha l
 ON t.id_tarifa = l.fk_id_tarifa
 WHERE t.valor = 15
 
-SELECT l.numero_linha, l.nome_linha, v.sentido, v.hora_inicio, v.hora_fim
+SELECT l.numero_linha, v.nome_destino, v.sentido, v.hora_inicio, v.hora_fim
 FROM linha l JOIN viagem v
 ON v.fk_id_linha = l.id_linha
 WHERE l.numero_linha = '610'

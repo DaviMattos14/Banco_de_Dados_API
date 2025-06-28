@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard GTFS - Rio de Janeiro</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .chart-container { width: 80%; max-width: 600px; margin: auto; } /* Ajustei o tamanho para pizza */
+    </style>
+</head>
+<body>
+    <h1>Linhas de Ônibus por Consórcio</h1>
+    <div class="chart-container">
+        <canvas id="consorcioChart"></canvas>
+    </div>
+
+    <script>
+        // 3. Registre o plugin globalmente para que o Chart.js o reconheça
+        Chart.register(ChartDataLabels);
+
+        async function renderChart() {
+            const response = await fetch('/api/linhas_por_consorcio');
+            const data = await response.json();
+
+            const labels = data.map(item => item.nome_consorcio);
+            const values = data.map(item => item.total_linhas);
+
+            const ctx = document.getElementById('consorcioChart').getContext('2d');
+
+            new Chart(ctx, {
+                // Mude o tipo para 'pie'
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Nº de Linhas',
+                        data: values,
+                        backgroundColor: [ // Cores para as fatias
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(153, 102, 255, 0.7)',
+                            'rgba(255, 159, 64, 0.7)'
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                // 4. Adicione a seção 'options' para configurar o plugin
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: 'black',
+                                // Configurações para as labels da legenda
+                                font: {
+                                    // Define o tamanho da fonte da legenda
+                                    size: 16,
+                                     // <-- AUMENTE ESTE VALOR CONFORME NECESSÁRIO
+                                }
+                            } // Posição da legenda
+                        },
+                        // Configuração específica do plugin datalabels
+                        datalabels: {
+                            // A função 'formatter' decide o que será exibido
+                            formatter: (value, context) => {
+                                // Pega o total de todos os valores somados
+                                return value;
+                            },
+                            color: '#000', // Cor do texto da porcentagem
+                            font: {
+                                weight: '200',
+                                size: 18,
+                            },
+                            // Adiciona uma pequena sombra para melhor legibilidade
+                            textStrokeColor: 'black',
+                            textStrokeWidth: 1
+                        }
+                    }
+                }
+            });
+        }
+
+        renderChart();
+    </script>
+</body>
+</html>
