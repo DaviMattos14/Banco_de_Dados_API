@@ -35,6 +35,7 @@
             /* Espaçamento entre os itens */
             margin-bottom: 20px;
             /* Espaçamento entre as linhas */
+            align-items: center;
         }
 
         /* Regra principal: todo container dentro de uma linha vira uma coluna flexível */
@@ -128,20 +129,37 @@
             <p id="media-tarifa-valor" class="kpi-value">R$ 0,00</p>
         </div>
         <div class="chart-container">
-            <h2>Total de Viagens por Consórcio</h2>
-            <canvas id="viagensConsorcioChart"></canvas>
-        </div>
-        <div class="chart-container">
             <h2>Nº de Linhas por Valor da Tarifa</h2>
             <canvas id="tarifaChart"></canvas>
         </div>
+        <div class="chart-container">
+            <h2>Valor da Passagem por Tipo de Linha</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo de Linha</th>
+                        <th>Valor da Passagem</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-tarifas-tipo">
+                    </tbody>
+            </table>
+        </div>
     </div>
-
+    
     <div class="dashboard-row">
         <div class="chart-container">
             <h2>Linhas por Consórcio</h2>
             <canvas id="consorcioChart"></canvas>
         </div>
+        <div class="chart-container">
+            <h2>Total de Viagens por Consórcio</h2>
+            <canvas id="viagensConsorcioChart"></canvas>
+        </div>
+    
+    </div>
+
+    <div class="dashboard-row">
         <div class="chart-container">
             <h2>Status das Linhas de Ônibus (Ativas x Inativas)</h2>
             <canvas id="statusChart"></canvas>
@@ -211,10 +229,10 @@
             Chart.register(ChartDataLabels);
 
             // Funções de renderização para os gráficos e tabelas estáticas
-            async function renderConsorcioChart() { const response = await fetch('/api/linhas_por_consorcio'); const data = await response.json(); const labels = data.map(item => item.nome_consorcio); const values = data.map(item => item.total_linhas); const ctx = document.getElementById('consorcioChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Nº de Linhas', data: values, backgroundColor: ['rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)', 'rgba(255, 206, 86, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)', 'rgba(255, 159, 64, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 16 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return percentage; }, color: '#000', font: { weight: '200', size: 18 }, textStrokeColor: 'white', textStrokeWidth: 1 } } } }); }
+            async function renderConsorcioChart() { const response = await fetch('/api/linhas_por_consorcio'); const data = await response.json(); const labels = data.map(item => item.nome_consorcio); const values = data.map(item => item.total_linhas); const ctx = document.getElementById('consorcioChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Nº de Linhas', data: values, backgroundColor: ['rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)', 'rgba(255, 206, 86, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)', 'rgba(255, 159, 64, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 18 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return percentage; }, color: '#000', font: { weight: 'bold', size: 22 }, textStrokeColor: 'white', textStrokeWidth: 1 } } } }); }
             async function renderTarifaChart() { const response = await fetch('/api/linhas_por_tarifa'); const data = await response.json(); const labels = data.map(item => `R$ ${item.valor.toFixed(2).replace('.', ',')}`); const values = data.map(item => item.total_linhas); const ctx = document.getElementById('tarifaChart').getContext('2d'); new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Quantidade de Linhas', data: values, backgroundColor: 'rgba(54, 162, 235, 0.7)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1 }] }, options: { responsive: true, plugins: { legend: { display: false }, datalabels: { anchor: 'center', align: 'center', color: 'black', font: { weight: 'bold' } } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Nº de Linhas' } }, x: { title: { display: true, text: 'Valor da Tarifa' } } } } }); }
-            async function renderStatusChart() { const response = await fetch('/api/status_linhas'); const data = await response.json(); const labels = data.map(item => item.status_linha); const values = data.map(item => item.quantidade); const ctx = document.getElementById('statusChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Status', data: values, backgroundColor: ['rgba(75, 192, 192, 0.7)', 'rgba(255, 99, 132, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 16 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return `${value}\n(${percentage})`; }, color: '#000', font: { weight: '200', size: 16 }, textAlign: 'center', textStrokeColor: 'white', textStrokeWidth: 1 } } } }); }
-            async function renderPontosChart() { const response = await fetch('/api/status_pontos'); const data = await response.json(); const labels = data.map(item => item.status_ponto); const values = data.map(item => item.quantidade); const ctx = document.getElementById('pontosChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Status dos Pontos', data: values, backgroundColor: ['rgba(213, 94, 00, 0.7)', 'rgba(230, 159, 00, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 16 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return `${value.toLocaleString('pt-BR')}\n(${percentage})`; }, color: '#000', font: { weight: '200', size: 16 }, textAlign: 'center', textStrokeColor: 'white', textStrokeWidth: 1 } } } }); }
+            async function renderStatusChart() { const response = await fetch('/api/status_linhas'); const data = await response.json(); const labels = data.map(item => item.status_linha); const values = data.map(item => item.quantidade); const ctx = document.getElementById('statusChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Status', data: values, backgroundColor: ['rgba(75, 192, 192, 0.7)', 'rgba(255, 99, 132, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 20 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return `${value}\n(${percentage})`; }, color: '#000', font: { weight: 'bold', size: 22 }, textAlign: 'center', textStrokeColor: 'white', textStrokeWidth: 1 } } } }); }
+            async function renderPontosChart() { const response = await fetch('/api/status_pontos'); const data = await response.json(); const labels = data.map(item => item.status_ponto); const values = data.map(item => item.quantidade); const ctx = document.getElementById('pontosChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Status dos Pontos', data: values, backgroundColor: ['rgba(213, 94, 00, 0.7)', 'rgba(230, 159, 00, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 20 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return `${value.toLocaleString('pt-BR')}\n(${percentage})`; }, color: '#000', font: { weight: 'bold', size: 22 }, textAlign: 'center', textStrokeColor: 'white', textStrokeWidth: 1 } } } }); }
             async function renderLinhasTable() { const response = await fetch('/api/linhas_sem_fds'); const data = await response.json(); const tabelaBody = document.getElementById('tabela-linhas-sem-fds'); tabelaBody.innerHTML = ''; 
             data.forEach(linha => {
             tabelaBody.innerHTML += `<tr><td>${linha.numero_linha}</td><td>${linha.nome_linha}</td><td>${linha.tipo}</td></tr>`;
@@ -260,6 +278,24 @@
                 document.getElementById('media-tarifa-valor').textContent = valorFormatado;
             }
 
+            async function renderTarifasPorTipoTable() {
+                const response = await fetch('/api/tarifas_por_tipo'); // <-- Rota atualizada
+                const data = await response.json();
+                
+                const tabelaBody = document.getElementById('tabela-tarifas-tipo');
+                tabelaBody.innerHTML = ''; // Limpa a tabela
+
+                if (data.length === 0) {
+                    tabelaBody.innerHTML = '<tr><td colspan="2">Nenhum dado encontrado.</td></tr>';
+                    return;
+                }
+
+                data.forEach(item => {
+                    const valorFormatado = `R$ ${item.valor.toFixed(2).replace('.', ',')}`;
+                    tabelaBody.innerHTML += `<tr><td>${item.tipo_formatado}</td><td>${valorFormatado}</td></tr>`;
+                });
+            }
+
             async function renderViagensChart() {
                 const response = await fetch('/api/viagens_por_consorcio');
                 const data = await response.json();
@@ -279,7 +315,7 @@
                         }]
                     },
                     options: {
-                        indexAxis: 'y', // <-- Deixa as barras na horizontal, bom para nomes longos
+                        indexAxis: 'y', // <-- Deixa as barras na horizontal
                         responsive: true,
                         plugins: { legend: { display: false } }
                     }
@@ -294,6 +330,7 @@
             renderStatusChart();
             renderPontosChart();
             renderLinhasTable();
+            renderTarifasPorTipoTable();
         })();
     </script>
 </body>

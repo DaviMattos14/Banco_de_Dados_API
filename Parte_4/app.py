@@ -276,6 +276,34 @@ def get_tarifa_media():
         return jsonify({"media_valor": float(media)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/tarifas_por_tipo')
+def get_tarifas_por_tipo():
+    """
+    Retorna os pares distintos de tipo de linha (formatado) e valor de tarifa.
+    """
+    query = text("""
+        SELECT DISTINCT
+            CASE l.tipo
+                WHEN 'regular' THEN 'Regular'
+                WHEN 'brt' THEN 'BRT'
+                WHEN '700' THEN 'Especial'
+                WHEN 'frescao' THEN 'Frescão'
+                ELSE l.tipo
+            END AS tipo_formatado,
+            t.valor
+        FROM Linha l
+        JOIN Tarifa t ON l.fk_id_tarifa = t.id_tarifa
+        WHERE l.tipo IS NOT NULL AND l.tipo != ''
+        ORDER BY t.valor;
+    """)
+    try:
+        df = pd.read_sql(query, db_engine)
+        df['valor'] = df['valor'].astype(float)
+        return jsonify(df.to_dict(orient='records'))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
      
 if __name__ == '__main__':
     app.run(debug=True)
