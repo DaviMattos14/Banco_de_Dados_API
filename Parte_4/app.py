@@ -1,8 +1,8 @@
 # 1. Adicione render_template à importação
-from flask import Flask, jsonify, Response, render_template
+from flask import Flask, jsonify, Response, render_template, request
 from sqlalchemy import create_engine, text
 import pandas as pd
-
+import requests
 # --- (O resto das suas configurações continua igual) ---
 app = Flask(__name__)
 db_connection_str = 'mysql+pymysql://Admin:1310223a8@localhost/gtfs_rj'
@@ -171,6 +171,89 @@ def get_trajeto(linha, sentido):
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# Adicione esta nova rota no seu app.py
+
+@app.route('/api/destinos/<linha>')
+def get_destinos(linha):
+    """
+    Para uma dada linha, retorna os sentidos (0 e 1) e seus
+    respectivos nomes de destino.
+    """
+    # Esta consulta busca os nomes de destino distintos para uma linha
+    query = text("""
+        SELECT DISTINCT sentido, nome_destino
+        FROM viagem
+        WHERE fk_id_linha = (SELECT id_linha FROM linha WHERE numero_linha = :linha LIMIT 1)
+        ORDER BY sentido;
+    """)
+    
+    try:
+        params = {"linha": linha}
+        df = pd.read_sql(query, db_engine, params=params)
+        result = df.to_dict(orient='records')
+        return jsonify(result)
         
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Lembre-se de adicionar 'request' às suas importações do Flask
+# from flask import Flask, jsonify, Response, render_template, request
+
+# Rota 1: Para as sugestões do autocompletar
+@app.route('/api/pontos/sugestao/<termo_busca>')
+def get_ponto_sugestoes(termo_busca):
+    """
+    Retorna uma lista de até 10 nomes de pontos que correspondem
+    a um termo de busca parcial.
+    """
+    # O operador LIKE com '%' busca por qualquer nome que COMECE com o termo
+    query = text("""
+        SELECT DISTINCT nome_ponto 
+        FROM pontos_de_onibus 
+        WHERE nome_ponto LIKE :termo 
+        LIMIT 10;
+    """)
+    try:
+        # Adicionamos o '%' ao termo para a busca com LIKE
+        params = {"termo": f"{termo_busca}%"}
+        df = pd.read_sql(query, db_engine, params=params)
+        # Retornamos uma lista simples de nomes
+        return jsonify(df['nome_ponto'].tolist())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Rota 2: Para buscar as linhas após selecionar um ponto
+@app.route('/api/linhas_por_ponto')
+def get_linhas_por_ponto():
+    """
+    Executa a consulta principal para encontrar todas as linhas que passam
+    em um ponto de ônibus específico.
+    """
+    # Pegamos o nome do ponto dos parâmetros da URL (?nome=...)
+    nome_ponto_selecionado = request.args.get('nome')
+
+    if not nome_ponto_selecionado:
+        return jsonify({"error": "Nome do ponto não fornecido"}), 400
+
+    query = text("""
+        SELECT DISTINCT l.numero_linha, l.nome_linha, v.nome_destino
+        FROM linha l JOIN (
+            SELECT DISTINCT fk_id_linha, nome_destino
+            FROM viagem JOIN (
+                SELECT fk_id_viagem FROM pontos_de_parada JOIN pontos_de_onibus
+                ON fk_id_ponto = id_ponto
+                WHERE nome_ponto = :nome_ponto
+            ) AS pontos ON id_viagem = pontos.fk_id_viagem
+        ) AS v ON l.id_linha = v.fk_id_linha
+        ORDER BY l.nome_linha;
+    """)
+    try:
+        params = {"nome_ponto": nome_ponto_selecionado}
+        df = pd.read_sql(query, db_engine, params=params)
+        return jsonify(df.to_dict(orient='records'))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+     
 if __name__ == '__main__':
     app.run(debug=True)

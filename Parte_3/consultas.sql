@@ -22,6 +22,7 @@ FROM linha JOIN (
         ON id_viagem = pontos.fk_id_viagem
 ) AS viagem
 ON id_linha = viagem.fk_id_linha
+ORDER BY nome_linha
 
 -- Número de Linhas de Ônibus agrupadas por consórcio
 SELECT nome_consorcio, COUNT(linhas.numero_linha)
