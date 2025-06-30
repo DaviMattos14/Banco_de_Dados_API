@@ -1,114 +1,232 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <title>Dashboard GTFS - Rio de Janeiro</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
-        h1, h2 { text-align: center; color: #333; }
-        .chart-container { 
-            width: 80%; max-width: 700px; margin: 40px auto; padding: 20px;
-            background-color: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background-color: #f4f4f9;
         }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px 15px; border: 1px solid #ddd; text-align: left; }
-        thead th { background-color: #337ab7; color: white; font-weight: bold; }
-        tbody tr:nth-child(even) { background-color: #f2f2f2; }
+
+        h1,
+        h2,
+        h3 {
+            text-align: center;
+            color: #333;
+        }
+
+        /* Container genérico para cada bloco de visualização */
+        .chart-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        /* A "linha" que usa Flexbox para alinhar os itens */
+        .dashboard-row {
+            display: flex;
+            gap: 20px;
+            /* Espaçamento entre os itens */
+            margin-bottom: 20px;
+            /* Espaçamento entre as linhas */
+        }
+
+        /* Regra principal: todo container dentro de uma linha vira uma coluna flexível */
+        .dashboard-row>.chart-container {
+            flex: 1;
+            /* Permite que o item cresça e ocupe o espaço de forma igual */
+            min-width: 0;
+            /* Importante para o item encolher corretamente em telas pequenas */
+        }
+
+        /* Estilos para o Card de KPI */
+        .kpi-card {
+            text-align: center;
+            background-color: #337ab7;
+            color: #fff;
+        }
+
+        .kpi-card h3 {
+            margin-top: 5;
+            font-size: 30px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .kpi-value {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        /* Estilos da Tabela e dos Controles de Busca (sem alteração) */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        thead th {
+            background-color: #337ab7;
+            color: white;
+            font-weight: bold;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
         .search-controls {
-            display: flex; gap: 15px; align-items: center; justify-content: center;
-            margin-bottom: 20px; flex-wrap: wrap;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
         }
-        .search-controls input { font-size: 16px; padding: 8px; width: 120px; border: 1px solid #ccc; border-radius: 4px;}
-        .search-controls button { 
-            font-size: 16px; padding: 8px 15px; cursor: pointer; 
-            background-color: #337ab7; color: white; border: none; border-radius: 4px;
+
+        .search-controls input,
+        .search-controls select {
+            font-size: 16px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: white;
         }
-        .search-controls button:hover { background-color: #286090; }
-        .search-controls select { font-size: 16px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background-color: white; }
+
+        .search-controls button {
+            font-size: 16px;
+            padding: 8px 15px;
+            cursor: pointer;
+            background-color: #337ab7;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
     </style>
 </head>
+
 <body>
     <h1>Dashboard de Transporte - Rio de Janeiro</h1>
 
-    <div class="chart-container">
-        <h2>Consultar Itinerário da Linha</h2>
-        <div class="search-controls">
-            <input type="text" id="linhaInput" placeholder="Nº da Linha" aria-label="Número da Linha">
-            <button id="buscarBtn">Buscar</button>
-            <select id="sentidoSelect" aria-label="Selecione o Sentido"><option value="">-- Selecione o Sentido --</option></select>
+    <div class="dashboard-row">
+        <div class="chart-container kpi-card">
+            <h3>Valor Médio da Passagem</h3>
+            <p id="media-tarifa-valor" class="kpi-value">R$ 0,00</p>
         </div>
-        <table>
-            <thead><tr><th>Sequência</th><th>Nome do Ponto de Parada</th></tr></thead>
-            <tbody id="tabela-trajeto"><tr><td colspan="2">Digite o número de uma linha e clique em "Buscar".</td></tr></tbody>
-        </table>
+        <div class="chart-container">
+            <h2>Total de Viagens por Consórcio</h2>
+            <canvas id="viagensConsorcioChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h2>Nº de Linhas por Valor da Tarifa</h2>
+            <canvas id="tarifaChart"></canvas>
+        </div>
     </div>
 
-    <div class="chart-container">
-        <h2>Buscar Linhas por Ponto de Parada</h2>
-        <div class="search-controls">
-            <input type="text" id="pontoInputBusca" placeholder="Nome exato do ponto..." style="width: 300px;">
-            <button id="buscarPontoBtn">Buscar Linhas</button>
+    <div class="dashboard-row">
+        <div class="chart-container">
+            <h2>Linhas por Consórcio</h2>
+            <canvas id="consorcioChart"></canvas>
         </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Nº da Linha</th>
-                    <th>Nome da Linha</th>
-                    <th>Destino</th>
-                </tr>
-            </thead>
-            <tbody id="tabela-linhas-ponto">
-                 <tr><td colspan="3">Digite o nome exato de um ponto e clique em "Buscar Linhas".</td></tr>
-            </tbody>
-        </table>
+        <div class="chart-container">
+            <h2>Status das Linhas de Ônibus (Ativas x Inativas)</h2>
+            <canvas id="statusChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h2>Status dos Pontos de Parada (Ativos x Desativados)</h2>
+            <canvas id="pontosChart"></canvas>
+        </div>
     </div>
 
-    <div class="chart-container">
-        <h2>Linhas de Ônibus por Consórcio</h2>
-        <canvas id="consorcioChart"></canvas>
+    <div class="dashboard-row">
+        <div class="chart-container">
+            <h2>Consultar Itinerário da Linha</h2>
+            <div class="search-controls">
+                <input type="text" id="linhaInput" placeholder="Nº da Linha" aria-label="Número da Linha">
+                <button id="buscarBtn">Buscar</button>
+                <select id="sentidoSelect" aria-label="Selecione o Sentido">
+                    <option value="">-- Sentido --</option>
+                </select>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Sequência</th>
+                        <th>Nome do Ponto de Parada</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-trajeto"></tbody>
+            </table>
+        </div>
+        <div class="chart-container">
+            <h2>Buscar Linhas por Ponto de Parada</h2>
+            <div class="search-controls">
+                <input type="text" id="pontoInputBusca" placeholder="Nome exato do ponto..." style="width: 300px;">
+                <button id="buscarPontoBtn">Buscar Linhas</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nº da Linha</th>
+                        <th>Nome da Linha</th>
+                        <th>Destino</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-linhas-ponto"></tbody>
+            </table>
+        </div>
     </div>
-    <div class="chart-container">
-        <h2>Nº de Linhas por Valor da Tarifa</h2>
-        <canvas id="tarifaChart"></canvas>
-    </div>
-    <div class="chart-container">
-        <h2>Status das Linhas (Ativas vs. Inativas)</h2>
-        <canvas id="statusChart"></canvas>
-    </div>
-    <div class="chart-container">
-        <h2>Status dos Pontos (Com vs. Sem Viagem)</h2>
-        <canvas id="pontosChart"></canvas>
-    </div>
+
     <div class="chart-container">
         <h2>Linhas que NÃO Operam nos Finais de Semana</h2>
         <table>
-            <thead><tr><th>Número da Linha</th><th>Nome da Linha</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Número da Linha</th>
+                    <th>Nome da Linha</th>
+                    <th>Tipo</th>
+                </tr>
+            </thead>
             <tbody id="tabela-linhas-sem-fds"></tbody>
         </table>
     </div>
 
-    
     <script>
         // Bloco de script auto-executável para encapsular todo o código
-        (function() {
+        (function () {
             Chart.register(ChartDataLabels);
 
             // Funções de renderização para os gráficos e tabelas estáticas
-            async function renderConsorcioChart() { const response = await fetch('/api/linhas_por_consorcio'); const data = await response.json(); const labels = data.map(item => item.nome_consorcio); const values = data.map(item => item.total_linhas); const ctx = document.getElementById('consorcioChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Nº de Linhas', data: values, backgroundColor: ['rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)', 'rgba(255, 206, 86, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)', 'rgba(255, 159, 64, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 16 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return percentage; }, color: '#000', font: { weight: '200', size: 18 }, textStrokeColor: 'black', textStrokeWidth: 1 } } } }); }
+            async function renderConsorcioChart() { const response = await fetch('/api/linhas_por_consorcio'); const data = await response.json(); const labels = data.map(item => item.nome_consorcio); const values = data.map(item => item.total_linhas); const ctx = document.getElementById('consorcioChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Nº de Linhas', data: values, backgroundColor: ['rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)', 'rgba(255, 206, 86, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)', 'rgba(255, 159, 64, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 16 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return percentage; }, color: '#000', font: { weight: '200', size: 18 }, textStrokeColor: 'white', textStrokeWidth: 1 } } } }); }
             async function renderTarifaChart() { const response = await fetch('/api/linhas_por_tarifa'); const data = await response.json(); const labels = data.map(item => `R$ ${item.valor.toFixed(2).replace('.', ',')}`); const values = data.map(item => item.total_linhas); const ctx = document.getElementById('tarifaChart').getContext('2d'); new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Quantidade de Linhas', data: values, backgroundColor: 'rgba(54, 162, 235, 0.7)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1 }] }, options: { responsive: true, plugins: { legend: { display: false }, datalabels: { anchor: 'center', align: 'center', color: 'black', font: { weight: 'bold' } } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Nº de Linhas' } }, x: { title: { display: true, text: 'Valor da Tarifa' } } } } }); }
-            async function renderStatusChart() { const response = await fetch('/api/status_linhas'); const data = await response.json(); const labels = data.map(item => item.status_linha); const values = data.map(item => item.quantidade); const ctx = document.getElementById('statusChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Status', data: values, backgroundColor: ['rgba(75, 192, 192, 0.7)', 'rgba(255, 99, 132, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 16 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return `${value}\n(${percentage})`; }, color: '#fff', font: { weight: 'bold', size: 14 }, textAlign: 'center', textStrokeColor: 'black', textStrokeWidth: 1 } } } }); }
-            async function renderPontosChart() { const response = await fetch('/api/status_pontos'); const data = await response.json(); const labels = data.map(item => item.status_ponto); const values = data.map(item => item.quantidade); const ctx = document.getElementById('pontosChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Status dos Pontos', data: values, backgroundColor: ['rgba(54, 162, 235, 0.7)', 'rgba(255, 159, 64, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 16 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return `${value.toLocaleString('pt-BR')}\n(${percentage})`; }, color: '#fff', font: { weight: 'bold', size: 14 }, textAlign: 'center', textStrokeColor: 'black', textStrokeWidth: 1 } } } }); }
-            async function renderLinhasTable() { const response = await fetch('/api/linhas_sem_fds'); const data = await response.json(); const tabelaBody = document.getElementById('tabela-linhas-sem-fds'); tabelaBody.innerHTML = ''; data.forEach(linha => { tabelaBody.innerHTML += `<tr><td>${linha.numero_linha}</td><td>${linha.nome_linha}</td></tr>`; }); }
-            
+            async function renderStatusChart() { const response = await fetch('/api/status_linhas'); const data = await response.json(); const labels = data.map(item => item.status_linha); const values = data.map(item => item.quantidade); const ctx = document.getElementById('statusChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Status', data: values, backgroundColor: ['rgba(75, 192, 192, 0.7)', 'rgba(255, 99, 132, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 16 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return `${value}\n(${percentage})`; }, color: '#000', font: { weight: '200', size: 16 }, textAlign: 'center', textStrokeColor: 'white', textStrokeWidth: 1 } } } }); }
+            async function renderPontosChart() { const response = await fetch('/api/status_pontos'); const data = await response.json(); const labels = data.map(item => item.status_ponto); const values = data.map(item => item.quantidade); const ctx = document.getElementById('pontosChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Status dos Pontos', data: values, backgroundColor: ['rgba(213, 94, 00, 0.7)', 'rgba(230, 159, 00, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 16 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return `${value.toLocaleString('pt-BR')}\n(${percentage})`; }, color: '#000', font: { weight: '200', size: 16 }, textAlign: 'center', textStrokeColor: 'white', textStrokeWidth: 1 } } } }); }
+            async function renderLinhasTable() { const response = await fetch('/api/linhas_sem_fds'); const data = await response.json(); const tabelaBody = document.getElementById('tabela-linhas-sem-fds'); tabelaBody.innerHTML = ''; 
+            data.forEach(linha => {
+            tabelaBody.innerHTML += `<tr><td>${linha.numero_linha}</td><td>${linha.nome_linha}</td><td>${linha.tipo}</td></tr>`;
+            }); }
+
             // Lógica para busca de itinerário com select dinâmico
             const linhaInput = document.getElementById('linhaInput'); const buscarBtn = document.getElementById('buscarBtn'); const sentidoSelect = document.getElementById('sentidoSelect'); const tabelaTrajetoBody = document.getElementById('tabela-trajeto');
             async function fetchAndShowTrajetoTable() { const numeroLinha = linhaInput.value.trim(); const sentido = sentidoSelect.value; if (!numeroLinha || sentido === "") return; tabelaTrajetoBody.innerHTML = '<tr><td colspan="2">Buscando...</td></tr>'; try { const response = await fetch(`/api/trajeto/${numeroLinha}/${sentido}`); const data = await response.json(); tabelaTrajetoBody.innerHTML = ''; if (data.length === 0) { tabelaTrajetoBody.innerHTML = '<tr><td colspan="2">Nenhum trajeto encontrado.</td></tr>'; return; } data.forEach(ponto => { tabelaTrajetoBody.innerHTML += `<tr><td>${ponto.sequencia}</td><td>${ponto.nome_ponto}</td></tr>`; }); } catch (error) { console.error('Falha ao buscar itinerário:', error); tabelaTrajetoBody.innerHTML = '<tr><td colspan="2">Erro ao carregar dados.</td></tr>'; } }
             async function handleBusca() { const numeroLinha = linhaInput.value.trim(); if (!numeroLinha) { alert("Por favor, digite um número de linha."); return; } sentidoSelect.innerHTML = '<option value="">Carregando destinos...</option>'; tabelaTrajetoBody.innerHTML = ''; try { const response = await fetch(`/api/destinos/${numeroLinha}`); const destinos = await response.json(); sentidoSelect.innerHTML = ''; if (destinos.length === 0) { sentidoSelect.innerHTML = '<option value="">Nenhum destino</option>'; return; } destinos.forEach(destino => { const option = document.createElement('option'); option.value = destino.sentido; option.textContent = destino.nome_destino; sentidoSelect.appendChild(option); }); await fetchAndShowTrajetoTable(); } catch (error) { console.error('Falha ao buscar destinos:', error); sentidoSelect.innerHTML = '<option value="">Erro ao buscar</option>'; } }
             buscarBtn.addEventListener('click', handleBusca); sentidoSelect.addEventListener('change', fetchAndShowTrajetoTable);
 
-            // --- INÍCIO DA LÓGICA DE BUSCA SIMPLES POR PONTO ---
+            // --- INÍCIO DA LÓGICA DE BUSCA POR PONTO ---
             const pontoInputBusca = document.getElementById('pontoInputBusca');
             const buscarPontoBtn = document.getElementById('buscarPontoBtn');
             const tabelaLinhasPontoBody = document.getElementById('tabela-linhas-ponto');
@@ -135,7 +253,42 @@
             buscarPontoBtn.addEventListener('click', buscarLinhasPorPonto);
             // --- FIM DA LÓGICA DE BUSCA SIMPLES POR PONTO ---
 
+            async function renderMediaTarifa() {
+                const response = await fetch('/api/tarifa_media');
+                const data = await response.json();
+                const valorFormatado = `R$ ${data.media_valor.toFixed(2).replace('.', ',')}`;
+                document.getElementById('media-tarifa-valor').textContent = valorFormatado;
+            }
+
+            async function renderViagensChart() {
+                const response = await fetch('/api/viagens_por_consorcio');
+                const data = await response.json();
+                const labels = data.map(item => item.nome_consorcio);
+                const values = data.map(item => item.total_viagens);
+                const ctx = document.getElementById('viagensConsorcioChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Nº de Viagens',
+                            data: values,
+                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y', // <-- Deixa as barras na horizontal, bom para nomes longos
+                        responsive: true,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
             // Chama as funções para renderizar o conteúdo estático inicial
+            renderMediaTarifa();
+            renderViagensChart();
             renderConsorcioChart();
             renderTarifaChart();
             renderStatusChart();
@@ -144,4 +297,5 @@
         })();
     </script>
 </body>
+
 </html>

@@ -1,21 +1,15 @@
-# 1. Adicione render_template à importação
 from flask import Flask, jsonify, Response, render_template, request
 from sqlalchemy import create_engine, text
 import pandas as pd
 import requests
-# --- (O resto das suas configurações continua igual) ---
 app = Flask(__name__)
 db_connection_str = 'mysql+pymysql://Admin:1310223a8@localhost/gtfs_rj'
 db_engine = create_engine(db_connection_str)
 # ----------------------------------------------------
 
-# 2. Modifique a rota principal (index)
 @app.route('/')
 def index():
-    # Esta função agora procura por 'index.html' na pasta 'templates' e o envia para o navegador.
     return render_template('index.html')
-
-# --- (Suas outras rotas, como /api/linhas_por_consorcio e /favicon.ico, continuam aqui) ---
 
 @app.route('/api/linhas_por_consorcio')
 def get_linhas_por_consorcio():
@@ -35,15 +29,12 @@ def get_linhas_por_consorcio():
 def favicon():
     return Response(status=204)
 
-# ------------------------------------------------------------------------------------------
-# Adicione esta nova rota no seu app.py
 
 @app.route('/api/linhas_por_tarifa')
 def get_linhas_por_tarifa():
     """
     Este endpoint retorna a contagem de linhas de ônibus agrupadas pelo valor da tarifa.
     """
-    # Renomeei a coluna de contagem para 'total_linhas' para facilitar o uso no front-end
     query = text("""
         SELECT valor, COUNT(l.id_linha) AS total_linhas
         FROM tarifa JOIN (
@@ -57,7 +48,6 @@ def get_linhas_por_tarifa():
     
     try:
         df = pd.read_sql(query, db_engine)
-        # O PANDAS pode retornar o valor como um Decimal. Convertemos para float para ser compatível com JSON.
         df['valor'] = df['valor'].astype(float)
         result = df.to_dict(orient='records')
         return jsonify(result)
@@ -103,7 +93,7 @@ def get_linhas_sem_fds():
     Este endpoint retorna uma lista de linhas que não operam aos fins de semana.
     """
     query = text("""
-        SELECT l.numero_linha, l.nome_linha
+        SELECT l.numero_linha, l.nome_linha, l.tipo
         FROM linha l 
         LEFT JOIN (
             SELECT * FROM viagem JOIN escala
@@ -112,7 +102,7 @@ def get_linhas_sem_fds():
         ) AS v
         ON l.id_linha = v.fk_id_linha
         WHERE v.id_escala IS NULL
-        ORDER BY l.numero_linha ASC;
+        ORDER BY l.numero_linha, l.tipo DESC;
     """)
     
     try:
@@ -123,7 +113,7 @@ def get_linhas_sem_fds():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# NOVA Rota para o gráfico de status dos pontos
+# Rota para o gráfico de status dos pontos
 @app.route('/api/status_pontos')
 def get_status_pontos():
     query = text("""
@@ -172,8 +162,6 @@ def get_trajeto(linha, sentido):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Adicione esta nova rota no seu app.py
-
 @app.route('/api/destinos/<linha>')
 def get_destinos(linha):
     """
@@ -197,10 +185,7 @@ def get_destinos(linha):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Lembre-se de adicionar 'request' às suas importações do Flask
-# from flask import Flask, jsonify, Response, render_template, request
-
-# Rota 1: Para as sugestões do autocompletar
+# Para as sugestões do autocompletar
 @app.route('/api/pontos/sugestao/<termo_busca>')
 def get_ponto_sugestoes(termo_busca):
     """
@@ -223,7 +208,7 @@ def get_ponto_sugestoes(termo_busca):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Rota 2: Para buscar as linhas após selecionar um ponto
+# Para buscar as linhas após selecionar um ponto
 @app.route('/api/linhas_por_ponto')
 def get_linhas_por_ponto():
     """
@@ -252,6 +237,43 @@ def get_linhas_por_ponto():
         params = {"nome_ponto": nome_ponto_selecionado}
         df = pd.read_sql(query, db_engine, params=params)
         return jsonify(df.to_dict(orient='records'))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# Para o total de viagens por consórcio
+@app.route('/api/viagens_por_consorcio')
+def get_viagens_por_consorcio():
+    """
+    Retorna a contagem total de viagens agrupada por consórcio.
+    """
+    query = text("""
+        SELECT c.nome_consorcio, COUNT(v.id_viagem) AS total_viagens
+        FROM Consorcio c
+        JOIN Linha l ON c.id_consorcio = l.fk_id_consorcio
+        JOIN Viagem v ON l.id_linha = v.fk_id_linha
+        GROUP BY c.nome_consorcio
+        ORDER BY total_viagens DESC;
+    """)
+    try:
+        df = pd.read_sql(query, db_engine)
+        return jsonify(df.to_dict(orient='records'))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Para o valor médio da tarifa
+@app.route('/api/tarifa_media')
+def get_tarifa_media():
+    """
+    Calcula e retorna o valor médio de todas as tarifas.
+    """
+    query = text("SELECT AVG(valor) AS media_valor FROM Tarifa;")
+    try:
+        df = pd.read_sql(query, db_engine)
+        # Pega o primeiro (e único) valor da coluna 'media_valor'
+        media = df['media_valor'].iloc[0]
+        # Retorna um JSON simples com a média
+        return jsonify({"media_valor": float(media)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
      
