@@ -69,6 +69,11 @@ FROM linha l LEFT JOIN viagem v
 ON l.id_linha = v.fk_id_linha
 WHERE v.id_viagem IS NULL
 
+SELECT COUNT(l.id_linha)
+FROM linha l LEFT JOIN viagem v
+ON l.id_linha = v.fk_id_linha
+WHERE v.id_viagem IS NULL
+
 SELECT DISTINCT l.id_linha, l.nome_linha
 FROM Linha l
 JOIN Viagem v ON l.id_linha = v.fk_id_linha
@@ -80,6 +85,8 @@ FROM Linha l
 LEFT JOIN Tarifa t ON l.fk_id_tarifa = t.id_tarifa
 WHERE t.id_tarifa IS NULL;
 
+SELECT
+
 -- todas as linha que não funcionam fim de semana
 SELECT l.numero_linha, l.nome_linha
 FROM linha l 
@@ -90,7 +97,7 @@ LEFT JOIN (
     WHERE escala.sab_dom = 1
 ) AS v
 ON l.id_linha = v.fk_id_linha
-WHERE v.id_escala IS NULL AND l.numero_linha ='665'
+WHERE v.id_escala IS NULL
 
 -- Tarifa do Ônibus
 SELECT valor, l.nome_linha, l.numero_linha
@@ -115,3 +122,38 @@ FROM viagem
 WHERE fk_id_linha = 'O0865AAA0A' and sentido = 0 AND fk_id_escala = 'U_REG'
 ORDER BY hora_inicio, hora_fim DESC
 LIMIT 100
+
+-------------
+
+SELECT 
+  status_linha,
+  COUNT(*) AS quantidade
+FROM (
+  SELECT 
+    l.id_linha,
+    CASE 
+      WHEN COUNT(v.id_viagem) > 0 THEN 'Ativa'
+      ELSE 'Inativa'
+    END AS status_linha
+  FROM Linha l
+  LEFT JOIN Viagem v ON l.id_linha = v.fk_id_linha
+  GROUP BY l.id_linha
+) AS sub
+GROUP BY status_linha;
+
+-----------------------
+SELECT 
+  status_ponto,
+  COUNT(*) AS quantidade
+FROM (
+  SELECT 
+    p.id_ponto,
+    CASE 
+      WHEN COUNT(pp.fk_id_viagem) > 0 THEN 'Com viagem'
+      ELSE 'Sem viagem'
+    END AS status_ponto
+  FROM Pontos_de_Onibus p
+  LEFT JOIN Pontos_de_parada pp ON p.id_ponto = pp.fk_id_ponto
+  GROUP BY p.id_ponto
+) AS sub
+GROUP BY status_ponto;
