@@ -159,6 +159,9 @@ FROM (
 ) AS sub
 GROUP BY status_ponto;
 
+
+
+
 ----------------- CONSULTAS UTILIZADAS NA API ------------------
 
 SELECT DISTINCT
@@ -209,7 +212,8 @@ SELECT DISTINCT p.nome_ponto, pp.sequencia
             ON id_linha=fk_id_linha 
             WHERE numero_linha = "610" AND sentido = 0
         ) 
-        ORDER BY pp.sequencia ASC;
+        ORDER BY pp.sequencia ASC 
+        LIMIT 5;
 
 SELECT status_ponto, COUNT(*) AS quantidade
         FROM (
@@ -262,3 +266,21 @@ SELECT nome_consorcio, COUNT(numero_linha) AS total_linhas
         FROM linha JOIN consorcio ON fk_id_consorcio = id_consorcio
         GROUP BY nome_consorcio
         ORDER BY total_linhas DESC;
+
+--- Linhas Experimentais de Coleta de Dados
+SELECT l.numero_linha, l.nome_linha
+FROM linha l
+WHERE l.numero_linha LIKE "LECD%"
+
+--- Linhas com serviço parcial
+SELECT l.numero_linha, l.nome_linha
+FROM linha l
+WHERE l.numero_linha LIKE "SP%"
+ORDER BY l.numero_linha, l.nome_linha
+
+--- Linhas com serviço variante
+SELECT l.numero_linha, l.nome_linha
+FROM linha l
+WHERE l.numero_linha LIKE "SV%"
+ORDER BY l.numero_linha, l.nome_linha
+

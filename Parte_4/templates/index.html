@@ -209,6 +209,30 @@
         </div>
     </div>
 
+    <div class="dashboard-row">
+        <div class="chart-container">
+            <h2>Linhas Experimentais para Coleta de Dados (LECD)</h2>
+            <table>
+                <thead><tr><th>Número</th><th>Nome da Linha</th></tr></thead>
+                <tbody id="tabela-experimentais"></tbody>
+            </table>
+        </div>
+        <div class="chart-container">
+            <h2>Linhas com Serviço Parcial (SP)</h2>
+            <table>
+                <thead><tr><th>Número</th><th>Nome da Linha</th></tr></thead>
+                <tbody id="tabela-parciais"></tbody>
+            </table>
+        </div>
+        <div class="chart-container">
+            <h2>Linhas com Serviço Variante (SV)</h2>
+            <table>
+                <thead><tr><th>Número</th><th>Nome da Linha</th></tr></thead>
+                <tbody id="tabela-variantes"></tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="chart-container">
         <h2>Linhas que NÃO Operam nos Finais de Semana</h2>
         <table>
@@ -227,8 +251,6 @@
         // Bloco de script auto-executável para encapsular todo o código
         (function () {
             Chart.register(ChartDataLabels);
-
-            // Funções de renderização para os gráficos e tabelas estáticas
             async function renderConsorcioChart() { const response = await fetch('/api/linhas_por_consorcio'); const data = await response.json(); const labels = data.map(item => item.nome_consorcio); const values = data.map(item => item.total_linhas); const ctx = document.getElementById('consorcioChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Nº de Linhas', data: values, backgroundColor: ['rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)', 'rgba(255, 206, 86, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)', 'rgba(255, 159, 64, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 18 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return percentage; }, color: '#000', font: { weight: 'bold', size: 22 }, textStrokeColor: 'white', textStrokeWidth: 1 } } } }); }
             async function renderTarifaChart() { const response = await fetch('/api/linhas_por_tarifa'); const data = await response.json(); const labels = data.map(item => `R$ ${item.valor.toFixed(2).replace('.', ',')}`); const values = data.map(item => item.total_linhas); const ctx = document.getElementById('tarifaChart').getContext('2d'); new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Quantidade de Linhas', data: values, backgroundColor: 'rgba(54, 162, 235, 0.7)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1 }] }, options: { responsive: true, plugins: { legend: { display: false }, datalabels: { anchor: 'center', align: 'center', color: 'black', font: { weight: 'bold' } } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Nº de Linhas' } }, x: { title: { display: true, text: 'Valor da Tarifa' } } } } }); }
             async function renderStatusChart() { const response = await fetch('/api/status_linhas'); const data = await response.json(); const labels = data.map(item => item.status_linha); const values = data.map(item => item.quantidade); const ctx = document.getElementById('statusChart').getContext('2d'); new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ label: 'Status', data: values, backgroundColor: ['rgba(75, 192, 192, 0.7)', 'rgba(255, 99, 132, 0.7)'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { color: 'black', font: { size: 20 } } }, datalabels: { formatter: (value, context) => { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value / total * 100).toFixed(1) + '%'; return `${value}\n(${percentage})`; }, color: '#000', font: { weight: 'bold', size: 22 }, textAlign: 'center', textStrokeColor: 'white', textStrokeWidth: 1 } } } }); }
@@ -279,11 +301,11 @@
             }
 
             async function renderTarifasPorTipoTable() {
-                const response = await fetch('/api/tarifas_por_tipo'); // <-- Rota atualizada
+                const response = await fetch('/api/tarifas_por_tipo'); 
                 const data = await response.json();
                 
                 const tabelaBody = document.getElementById('tabela-tarifas-tipo');
-                tabelaBody.innerHTML = ''; // Limpa a tabela
+                tabelaBody.innerHTML = ''; 
 
                 if (data.length === 0) {
                     tabelaBody.innerHTML = '<tr><td colspan="2">Nenhum dado encontrado.</td></tr>';
@@ -321,8 +343,34 @@
                     }
                 });
             }
+            async function renderTable(apiEndpoint, tableBodyId, colunas) {
+                try {
+                    const response = await fetch(apiEndpoint);
+                    const data = await response.json();
+                    const tabelaBody = document.getElementById(tableBodyId);
+                    tabelaBody.innerHTML = '';
+
+                    if (data.length === 0) {
+                        tabelaBody.innerHTML = `<tr><td colspan="${colunas.length}">Nenhuma linha encontrada.</td></tr>`;
+                        return;
+                    }
+                    data.forEach(item => {
+                        let rowHtml = '<tr>';
+                        colunas.forEach(col => rowHtml += `<td>${item[col] || ''}</td>`);
+                        rowHtml += '</tr>';
+                        tabelaBody.innerHTML += rowHtml;
+                    });
+                } catch (error) {
+                    console.error(`Falha ao carregar dados para ${tableBodyId}:`, error);
+                    const tabelaBody = document.getElementById(tableBodyId);
+                    tabelaBody.innerHTML = `<tr><td colspan="${colunas.length}">Erro ao carregar dados.</td></tr>`;
+                }
+            }
 
             // Chama as funções para renderizar o conteúdo estático inicial
+            renderTable('/api/linhas/experimentais', 'tabela-experimentais', ['numero_linha', 'nome_linha']);
+            renderTable('/api/linhas/parciais', 'tabela-parciais', ['numero_linha', 'nome_linha']);
+            renderTable('/api/linhas/variantes', 'tabela-variantes', ['numero_linha', 'nome_linha']);
             renderMediaTarifa();
             renderViagensChart();
             renderConsorcioChart();

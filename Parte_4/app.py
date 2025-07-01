@@ -281,6 +281,36 @@ def get_tarifas_por_tipo():
         return jsonify(df.to_dict(orient='records'))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/linhas/experimentais')
+def get_linhas_experimentais():
+    """Retorna as linhas experimentais (LECD)."""
+    query = text("SELECT l.numero_linha, l.nome_linha FROM linha l WHERE l.numero_linha LIKE 'LECD%';")
+    try:
+        df = pd.read_sql(query, db_engine)
+        return jsonify(df.to_dict(orient='records'))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/linhas/parciais')
+def get_linhas_parciais():
+    """Retorna as linhas com serviço parcial (SP)."""
+    query = text("SELECT l.numero_linha, l.nome_linha FROM linha l WHERE l.numero_linha LIKE 'SP%' ORDER BY l.numero_linha, l.nome_linha;")
+    try:
+        df = pd.read_sql(query, db_engine)
+        return jsonify(df.to_dict(orient='records'))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/linhas/variantes')
+def get_linhas_variantes():
+    """Retorna as linhas com serviço variante (SV)."""
+    query = text("SELECT l.numero_linha, l.nome_linha FROM linha l WHERE l.numero_linha LIKE 'SV%' ORDER BY l.numero_linha, l.nome_linha;")
+    try:
+        df = pd.read_sql(query, db_engine)
+        return jsonify(df.to_dict(orient='records'))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
      
 if __name__ == '__main__':
     app.run(debug=True)
