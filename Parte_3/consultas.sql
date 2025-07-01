@@ -158,3 +158,107 @@ FROM (
   GROUP BY p.id_ponto
 ) AS sub
 GROUP BY status_ponto;
+
+----------------- CONSULTAS UTILIZADAS NA API ------------------
+
+SELECT DISTINCT
+            CASE l.tipo
+                WHEN 'regular' THEN 'Regular'
+                WHEN 'brt' THEN 'BRT'
+                WHEN '700' THEN 'Especial'
+                WHEN 'frescao' THEN 'Frescão'
+                ELSE l.tipo
+            END AS tipo_formatado,
+            t.valor
+        FROM Linha l
+        JOIN Tarifa t ON l.fk_id_tarifa = t.id_tarifa
+        WHERE l.tipo IS NOT NULL AND l.tipo != ''
+        ORDER BY t.valor;
+
+
+SELECT AVG(valor) AS media_valor FROM Tarifa;
+
+SELECT c.nome_consorcio, COUNT(v.id_viagem) AS total_viagens
+        FROM Consorcio c
+        JOIN Linha l ON c.id_consorcio = l.fk_id_consorcio
+        JOIN Viagem v ON l.id_linha = v.fk_id_linha
+        GROUP BY c.nome_consorcio
+        ORDER BY total_viagens DESC;
+
+SELECT DISTINCT l.numero_linha, l.nome_linha, v.nome_destino
+        FROM linha l JOIN (
+            SELECT DISTINCT fk_id_linha, nome_destino
+            FROM viagem JOIN (
+                SELECT fk_id_viagem FROM pontos_de_parada JOIN pontos_de_onibus
+                ON fk_id_ponto = id_ponto
+                WHERE nome_ponto = "CMS Jorge Saldanha Bandeira de Mello"
+            ) AS pontos ON id_viagem = pontos.fk_id_viagem
+        ) AS v ON l.id_linha = v.fk_id_linha
+        ORDER BY l.nome_linha;
+
+SELECT DISTINCT sentido, nome_destino
+        FROM viagem
+        WHERE fk_id_linha = (SELECT id_linha FROM linha WHERE numero_linha = "610" LIMIT 1)
+        ORDER BY sentido;
+
+SELECT DISTINCT p.nome_ponto, pp.sequencia 
+        FROM pontos_de_parada pp JOIN pontos_de_onibus p
+        ON p.id_ponto = pp.fk_id_ponto 
+        WHERE pp.fk_id_viagem IN (
+            SELECT id_viagem FROM linha JOIN viagem 
+            ON id_linha=fk_id_linha 
+            WHERE numero_linha = "610" AND sentido = 0
+        ) 
+        ORDER BY pp.sequencia ASC;
+
+SELECT status_ponto, COUNT(*) AS quantidade
+        FROM (
+            SELECT 
+                p.id_ponto,
+                CASE WHEN COUNT(pp.fk_id_viagem) > 0 THEN 'Ativos' ELSE 'Desativados' END AS status_ponto
+            FROM Pontos_de_Onibus p
+            LEFT JOIN Pontos_de_parada pp ON p.id_ponto = pp.fk_id_ponto
+            GROUP BY p.id_ponto
+        ) AS sub
+        GROUP BY status_ponto;
+
+SELECT l.numero_linha, l.nome_linha, l.tipo
+        FROM linha l 
+        LEFT JOIN (
+            SELECT * FROM viagem JOIN escala
+            ON viagem.fk_id_escala = escala.id_escala
+            WHERE escala.sab_dom = 1
+        ) AS v
+        ON l.id_linha = v.fk_id_linha
+        WHERE v.id_escala IS NULL
+        ORDER BY l.numero_linha, l.tipo DESC;
+
+SELECT 
+            status_linha,
+            COUNT(*) AS quantidade
+        FROM (
+            SELECT 
+                l.id_linha,
+                CASE 
+                    WHEN COUNT(v.id_viagem) > 0 THEN 'Ativa'
+                    ELSE 'Inativa'
+                END AS status_linha
+            FROM Linha l
+            LEFT JOIN Viagem v ON l.id_linha = v.fk_id_linha
+            GROUP BY l.id_linha
+        ) AS sub
+        GROUP BY status_linha;
+
+SELECT valor, COUNT(l.id_linha) AS total_linhas
+        FROM tarifa JOIN (
+            SELECT DISTINCT id_linha, fk_id_tarifa
+            FROM linha
+        ) AS l
+        ON tarifa.id_tarifa = l.fk_id_tarifa
+        GROUP BY valor
+        ORDER BY valor ASC;
+
+SELECT nome_consorcio, COUNT(numero_linha) AS total_linhas
+        FROM linha JOIN consorcio ON fk_id_consorcio = id_consorcio
+        GROUP BY nome_consorcio
+        ORDER BY total_linhas DESC;

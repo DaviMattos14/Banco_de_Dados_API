@@ -139,7 +139,6 @@ def get_status_pontos():
 def get_trajeto(linha, sentido):
     """
     Retorna a sequência de nomes de pontos para uma dada linha e sentido.
-    (Versão para a tabela, não precisa de coordenadas).
     """
     query = text("""
         SELECT DISTINCT p.nome_ponto, pp.sequencia 
@@ -185,28 +184,6 @@ def get_destinos(linha):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Para as sugestões do autocompletar
-@app.route('/api/pontos/sugestao/<termo_busca>')
-def get_ponto_sugestoes(termo_busca):
-    """
-    Retorna uma lista de até 10 nomes de pontos que correspondem
-    a um termo de busca parcial.
-    """
-    # O operador LIKE com '%' busca por qualquer nome que COMECE com o termo
-    query = text("""
-        SELECT DISTINCT nome_ponto 
-        FROM pontos_de_onibus 
-        WHERE nome_ponto LIKE :termo 
-        LIMIT 10;
-    """)
-    try:
-        # Adicionamos o '%' ao termo para a busca com LIKE
-        params = {"termo": f"{termo_busca}%"}
-        df = pd.read_sql(query, db_engine, params=params)
-        # Retornamos uma lista simples de nomes
-        return jsonify(df['nome_ponto'].tolist())
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 # Para buscar as linhas após selecionar um ponto
 @app.route('/api/linhas_por_ponto')
